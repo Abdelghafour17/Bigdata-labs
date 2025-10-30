@@ -6,20 +6,20 @@ services:
     container_name: hadoop-master
     hostname: hadoop-master
     ports:
-      - "9870:9870" # HDFS NameNode Web UI
-      - "8088:8088" # YARN ResourceManager Web UI
-      - "7077:7077" # Spark Master
-      - "19888:19888" # MapReduce JobHistory Server
-      - "8080:8080" # Général / Jupyter
-      - "9000:9000" # HDFS default port
+      - "9870:9870"    # HDFS NameNode Web UI
+      - "8088:8088"    # YARN ResourceManager Web UI
+      - "7077:7077"    # Spark Master
+      - "19888:19888"  # MapReduce JobHistory Server
+      - "8080:8080"    # Jupyter / interface web
+      - "9000:9000"    # HDFS default port
+      - "9092:9092"    # Kafka broker port (si tu veux l’exposer)
+      - "2181:2181"    # ZooKeeper port (optionnel)
     volumes:
       - type: bind
-        # CHEMIN CORRIGÉ pour votre machine locale
         source: C:/Users/pc/Documents/hadoop_project
         target: /shared_volume
     networks:
       - hadoop-net
-    # Garde le conteneur en vie en démarrant SSH et en surveillant un fichier
     command: /bin/bash -c "service ssh start; tail -f /dev/null"
 
   hadoop-slave1:
@@ -27,7 +27,7 @@ services:
     container_name: hadoop-slave1
     hostname: hadoop-slave1
     ports:
-      - "8040:8042" # YARN NodeManager Port
+      - "8040:8042"    # YARN NodeManager port
     networks:
       - hadoop-net
     command: /bin/bash -c "service ssh start; tail -f /dev/null"
@@ -37,10 +37,23 @@ services:
     container_name: hadoop-slave2
     hostname: hadoop-slave2
     ports:
-      - "8041:8042" # YARN NodeManager Port
+      - "8041:8042"    # YARN NodeManager port
     networks:
       - hadoop-net
     command: /bin/bash -c "service ssh start; tail -f /dev/null"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    hostname: kafka-ui
+    networks:
+      - hadoop-net
+    ports:
+      - "8087:8080"  # Interface web Kafka UI
+    environment:
+      KAFKA_CLUSTERS_0_NAME: KafkaCluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: hadoop-master:9092,hadoop-master:9093,hadoop-master:9094
+      KAFKA_CLUSTERS_0_ZOOKEEPER: hadoop-master:2181
 
 networks:
   hadoop-net:

@@ -1,0 +1,58 @@
+-- Charger les fichiers
+employees = LOAD '/SharedVolume/employees.txt' USING PigStorage(',') 
+             AS (id:int, nom:chararray, sexe:chararray, salaire:double, depno:int, region:chararray, city:chararray);
+
+departements = LOAD '/SharedVolume/departements.txt' USING PigStorage(',') 
+               AS (depno:int, depname:chararray);
+
+-- 1 Salaire moyen des employés par département
+salaire_moyen = GROUP employees BY depno;
+salaire_moyen = FOREACH salaire_moyen GENERATE group AS depno, AVG(employees.salaire) AS salaire_moyen;
+DUMP salaire_moyen;
+
+-- 2 Nombre d'employés par département
+nb_employes_dep = GROUP employees BY depno;
+nb_employes_dep = FOREACH nb_employes_dep GENERATE group AS depno, COUNT(employees) AS nb_employes;
+DUMP nb_employes_dep;
+
+-- 3 Liste des employés avec leur département
+emp_dep = JOIN employees BY depno, departements BY depno;
+emp_dep = FOREACH emp_dep GENERATE employees.nom, employees.prenom, departements.depname;
+DUMP emp_dep;
+
+-- 4 Employés ayant un salaire > 60000
+haut_salaire = FILTER employees BY salaire > 60000;
+DUMP haut_salaire;
+
+-- 5 Département avec le salaire le plus élevé
+max_salaire = GROUP employees BY depno;
+max_salaire = FOREACH max_salaire GENERATE group AS depno, MAX(employees.salaire) AS max_sal;
+max_salaire = ORDER max_salaire BY max_sal DESC;
+dep_max_salaire = LIMIT max_salaire 1;
+DUMP dep_max_salaire;
+
+-- 6 Départements sans employés
+dep_sans_emp = COGROUP departements BY depno, employees BY depno;
+dep_sans_emp = FILTER dep_sans_emp BY IsEmpty(employees);
+dep_sans_emp = FOREACH dep_sans_emp GENERATE departements.depname;
+
+DUMP dep_sans_emp;
+
+-- 7 Nombre total d'employés
+total_emp = FOREACH (GROUP employees ALL) GENERATE COUNT(employees) AS total_employes;
+DUMP total_emp;
+
+-- 8 Employés de la ville de Paris
+emp_paris = FILTER employees BY region == 'Paris';
+DUMP emp_paris;
+
+-- 9 Salaire total des employés par ville
+sal_total_ville = GROUP employees BY region;
+sal_total_ville = FOREACH sal_total_ville GENERATE group AS region, SUM(employees.salaire) AS total_salaire;
+DUMP sal_total_ville;
+
+-- 10 Départements qui ont des femmes employées
+femmes = FILTER employees BY sexe == 'Female';
+dep_femmes = JOIN femmes BY depno, departements BY depno;
+dep_name = FOREACH dep_femmes GENERATE departements.depname;
+STORE dep_name INTO 'pigout/employes_femmes' USING PigStorage(',');
